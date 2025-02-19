@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Çarpma Oyunu</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+    #container {
+      text-align: center;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0px 3px 10px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 350px;
+      border: 3px solid #40E0D0;/* Turkuaz Çerçeve */
+      margin-top: 90px;
+    }
+    input {
+      font-size: 1em;
+      padding: 5px;
+      width: 30%;
+      text-align: center;
+      margin-left: 5px;
+    }
+    button {
+      font-size: 1em;
+      padding: 8px;
+      margin: 5px;
+    }
+    .correct { color: green; }
+    .wrong { color: red; }
+    .warning { color: red; font-weight: bold; }
+    #quiz-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border: 2px solid #40E0D0;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    .result-icon {
+      font-size: 1.2em;
+      margin-left: 5px;
+    }
+    .answer-feedback {
+      font-size: 1.1em;
+      margin-top: 5px;
+    }
+
+    /* Tablo yazılarını küçült */
+    table {
+      font-size: 65%; 
+      margin: 30px 10px 10px 10px auto;
+      width: 100%;
+      border-collapse: collapse;
+      height: 100vh auto;
+      overflow-y: auto;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #40E0D0;
+      color: white;
+    }
+    td.correct {
+      color: green;
+    }
+    td.wrong {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Çarpma Oyunu</h1>
+    <p id="timer">⏳ Geçen Süre: 0.00 sn</p>
+
+    <div id="setup">
+      <label>Kaçlara kadar ezberledin?</label>
+      <input type="number" id="maxNumber" min="2" max="10" value="10">
+      <button onclick="startGame()">Başla</button>
+    </div>
+
+    <div id="quiz" style="display:none;"></div>
+    <p id="warning" class="warning" style="display:none;">Bir değer girin!</p>
+    <div id="score"></div>
+    <div id="questionTimes"></div>
+    <button id="restart" onclick="restartGame()" style="display:none;">Tekrar Oyna</button>
+  </div>
+
+  <script>
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let startTime;
+    let totalElapsedTime = 0;
+    let questionDetails = [];
+    let maxNumber;
+
+    function generateQuestions() {
+  questions = [];
+  for (let i = 2; i <= maxNumber; i++) {
+    for (let j = 1; j <= 10; j++) {
+      questions.push({ num1: i, num2: j, answer: i * j });
+    }
+  }
+  questions.sort(() => Math.random() - 0.5); // Soruları karıştır
+  questions = questions.slice(0, 10); // İlk 10 soruyu al
+}
+
+    function startTimer() {
+      startTime = new Date().getTime();
+    }
+
+    function stopTimer() {
+      let questionTime = ((new Date().getTime() - startTime) / 1000).toFixed(2);
+      totalElapsedTime += parseFloat(questionTime);
+      document.getElementById("timer").innerText = `⏳ Geçen Süre: ${questionTime} sn`;
+      return questionTime;
+    }
+
+    function startGame() {
+      maxNumber = Number(document.getElementById("maxNumber").value);
+      if (maxNumber < 2 || maxNumber > 10) {
+        alert("Lütfen 2 ile 10 arasında bir sayı girin!");
+        return;
+      }
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("quiz").style.display = "block";
+      generateQuestions();
+      askQuestion();
+    }
+
+    function askQuestion() {
+      if (currentQuestionIndex < questions.length) {
+        const q = questions[currentQuestionIndex];
+        document.getElementById("quiz").innerHTML = `
+          <p><b>${currentQuestionIndex + 1}. Soru:</b></p>
+          <div id="quiz-box">
+            <p><b>${q.num1} x ${q.num2} =</b></p>
+            <input type="number" id="answer" autofocus>
+            <button id="submitAnswer">Cevapla</button>
+          </div>
+          <div id="answerFeedback" class="answer-feedback"></div>
+        `;
+        document.getElementById("warning").style.display = "none";
+        startTimer();
+        document.getElementById("answer").focus();
+
+        // ENTER tuşuna basınca da çalıştır
+        document.getElementById("answer").addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            checkAnswer();
+          }
+        });
+
+        // Butona basınca çalıştır
+        document.getElementById("submitAnswer").addEventListener("click", checkAnswer);
+
+      } else {
+        showResults();
+      }
+    }
+
+    function checkAnswer() {
+      const q = questions[currentQuestionIndex];
+      const answerInput = document.getElementById("answer");
+      const userAnswer = answerInput.value.trim();
+
+      if (userAnswer === "") {
+        document.getElementById("warning").style.display = "block";
+        return;
+      }
+
+      const questionTime = stopTimer();
+      let isCorrect = Number(userAnswer) === q.answer;
+      questionDetails.push({
+        soru: `${q.num1} x ${q.num2}`,
+        cevap: Number(userAnswer),
+        dogruCevap: q.answer,
+        süre: questionTime,
+        icon: isCorrect ? '✅' : '❌'
+      });
+
+      isCorrect ? correctCount++ : wrongCount++;
+
+      // Sonuç geri bildirimini göster
+      const feedback = isCorrect ? 
+        `<span class="correct">Doğru! ✅</span>` : 
+        `<span class="wrong">Yanlış! ❌</span>`;
+
+      document.getElementById("answerFeedback").innerHTML = feedback;
+
+      currentQuestionIndex++;
+      setTimeout(askQuestion, 500);
+    }
+
+    function showResults() {
+      document.getElementById("quiz").innerHTML = "";
+      document.getElementById("score").innerHTML = `
+        <h3>Sonuçlar</h3>
+        <p>✅ Doğru: ${correctCount} | ❌ Yanlış: ${wrongCount}</p>
+        <p>⏱️ Toplam Süre: ${totalElapsedTime.toFixed(2)} sn</p>
+      `;
+
+      let tableHTML = `<table>
+        <tr>
+          <th>Soru</th>
+          <th>Cevabın</th>
+          <th>Doğru Cevap</th>
+          <th>Süre (sn)</th>
+          <th>Sonuç</th>
+        </tr>`;
+
+      questionDetails.forEach(q => {
+        tableHTML += `
+          <tr>
+            <td>${q.soru}</td>
+            <td class="${q.cevap === q.dogruCevap ? 'correct' : 'wrong'}">${q.cevap}</td>
+            <td>${q.dogruCevap}</td>
+            <td>${q.süre}</td>
+            <td class="result-icon">${q.icon}</td>
+          </tr>`;
+      });
+
+      tableHTML += `</table>`;
+      document.getElementById("questionTimes").innerHTML = tableHTML;
+      document.getElementById("restart").style.display = "block";
+    }
+
+    function restartGame() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
